@@ -35,7 +35,6 @@
       background: #fff;
     }
 
-
     #showShorts {
       border-bottom: 3px solid #dc3545;
     }
@@ -46,6 +45,31 @@
 
     #showSearches {
       border-bottom: 3px solid #d97706;
+    }
+
+    /* Selection Utilities Styling */
+    .selection-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .selection-btn {
+      flex: 1;
+      margin: 0 2px;
+      padding: 6px 2px;
+      font-size: 10px;
+      font-weight: bold;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #eaeaea;
+      color: #444;
+      transition: background 0.2s;
+    }
+
+    .selection-btn:hover {
+      background: #dddddd;
     }
 
     #videoList {
@@ -140,11 +164,21 @@
 <body>
   <h3>Feed Sanitizer ✨☕</h3>
 
+  <!-- Tabs Filter Container -->
   <div class="filter-container">
     <button class="filter-btn" id="showAll">All</button>
     <button class="filter-btn" id="showShorts">Shorts</button>
     <button class="filter-btn" id="showVideos">Videos</button>
     <button class="filter-btn" id="showSearches">Searches</button>
+  </div>
+
+  <div class="selection-container">
+    <button class="selection-btn" id="selectAll">☑️ Select All Visible</button>
+    <button class="selection-btn" id="clearAll">⬜ Clear All Selection</button>
+    <button id="loadMoreBtn"
+      style="background-color: #0288d1; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin-left: 5px;">
+      🔄 Load Next Batch
+    </button>
   </div>
 
   <div id="videoList">Loading pipeline...</div>

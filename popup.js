@@ -4,72 +4,55 @@ let currentFilter = "All";
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (!tabs[0] || !tabs[0].url.includes("myactivity.google.com/product/youtube")) {
         const container = document.getElementById("videoList");
-        container.innerHTML = "";
-        const errPara = document.createElement("p");
-        errPara.style.cssText = "color:red; font-size:12px; text-align:center;";
-        errPara.textContent = "Error: Open myactivity.google.com/product/youtube first!";
-        container.appendChild(errPara);
+        if (container) {
+            container.innerHTML = "<p style='color:red; text-align:center;'>Error: Open YouTube History page first!</p>";
+        }
         return;
     }
-
     fetchLatestData(tabs[0].id);
 });
 
 function fetchLatestData(tabId) {
     chrome.tabs.sendMessage(tabId, { action: "getHistory" }, (response) => {
-        if (response && response.data && response.data.length > 0) {
+        if (response && response.data) {
             localHistoryData = response.data;
+            chrome.storage.local.set({ currentHistory: localHistoryData });
             applyCurrentFilter();
-        } else {
-            const container = document.getElementById("videoList");
-            container.innerHTML = "";
-            const noDataPara = document.createElement("p");
-            noDataPara.style.cssText = "font-size:12px; text-align:center; color:#666;";
-            noDataPara.textContent = "No items found on screen. Scroll down on the page and reopen extension.";
-            container.appendChild(noDataPara);
         }
     });
 }
 
 function renderList(items) {
     const container = document.getElementById("videoList");
+    if (!container) return;
     container.innerHTML = "";
 
     if (items.length === 0) {
-        const structuralPara = document.createElement("p");
-        structuralPara.style.cssText = "font-size:11px; text-align:center; color:#999;";
-        structuralPara.textContent = `No items found in ${currentFilter}.`;
-        container.appendChild(structuralPara);
+        container.innerHTML = `<p style='text-align:center; color:#999; font-size:11px;'>No items found in ${currentFilter}.</p>`;
         return;
     }
 
     items.forEach(item => {
         const div = document.createElement("div");
         div.className = "video-item";
-        div.setAttribute('title', item.title);
 
         let tagClass = 'tag-video';
         if (item.type === 'Short') tagClass = 'tag-short';
         if (item.type === 'Search') tagClass = 'tag-search';
-
 
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.className = "video-chk";
         checkbox.setAttribute("data-id", item.id);
 
-
         const textWrapper = document.createElement("div");
         textWrapper.className = "video-text";
-
 
         const tagSpan = document.createElement("span");
         tagSpan.className = `tag ${tagClass}`;
         tagSpan.textContent = item.type.toUpperCase();
 
-
         const cleanTitleText = item.title.substring(0, 36) + (item.title.length > 36 ? '...' : '');
-
 
         textWrapper.appendChild(tagSpan);
         textWrapper.appendChild(document.createTextNode(` ${cleanTitleText}`));
@@ -85,44 +68,62 @@ function applyCurrentFilter() {
     else renderList(localHistoryData.filter(i => i.type === currentFilter));
 }
 
+// --- Filter Event Listeners ---
+document.getElementById("showAll")?.addEventListener("click", () => { currentFilter = "All"; applyCurrentFilter(); });
+document.getElementById("showShorts")?.addEventListener("click", () => { currentFilter = "Short"; applyCurrentFilter(); });
+document.getElementById("showVideos")?.addEventListener("click", () => { currentFilter = "Video"; applyCurrentFilter(); });
+document.getElementById("showSearches")?.addEventListener("click", () => { currentFilter = "Search"; applyCurrentFilter(); });
 
-document.getElementById("showAll").addEventListener("click", () => { currentFilter = "All"; applyCurrentFilter(); });
-document.getElementById("showShorts").addEventListener("click", () => { currentFilter = "Short"; applyCurrentFilter(); });
-document.getElementById("showVideos").addEventListener("click", () => { currentFilter = "Video"; applyCurrentFilter(); });
-document.getElementById("showSearches").addEventListener("click", () => { currentFilter = "Search"; applyCurrentFilter(); });
+// --- Selection Macro System ---
+document.getElementById("selectAll")?.addEventListener("click", () => {
+    document.querySelectorAll(".video-chk").forEach(chk => chk.checked = true);
+});
+document.getElementById("clearAll")?.addEventListener("click", () => {
+    document.querySelectorAll(".video-chk").forEach(chk => chk.checked = false);
+});
 
+// 🌟 MANUAL RE-FILL OVERRIDE (Flawless Execution Sync)
+document.getElementById("loadMoreBtn")?.addEventListener("click", () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const logger = document.getElementById("statusLogger");
+        if (logger) logger.textContent = "⏳ Scrolling page downwards...";
 
-document.getElementById("deleteSelected").addEventListener("click", async () => {
+        // Scroll the live window down to spin up native lazy-load items
+        chrome.tabs.sendMessage(tabs[0].id, { action: "triggerPageScroll" });
+
+        // Wipe local memory state completely so old dynamic index IDs drop
+        localHistoryData = [];
+        chrome.storage.local.set({ currentHistory: [] });
+
+        // Wait for page transition, then index the entire page cleanly
+        setTimeout(() => {
+            fetchLatestData(tabs[0].id);
+            if (logger) logger.textContent = "✅ Fresh screen indices mapped!";
+        }, 1200);
+    });
+});
+
+// --- Execution Pipeline ---
+document.getElementById("deleteSelected")?.addEventListener("click", () => {
     const checkboxes = document.querySelectorAll(".video-chk:checked");
     const logger = document.getElementById("statusLogger");
 
     if (checkboxes.length === 0) return alert("Please check at least one box!");
 
-    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-        logger.textContent = `⏳ Sweeping ${checkboxes.length} records...`;
+    const idsToNuke = Array.from(checkboxes).map(chk => chk.getAttribute("data-id"));
 
-        for (let chk of checkboxes) {
-            const targetId = chk.getAttribute("data-id");
-            const matchedItem = localHistoryData.find(i => i.id === targetId);
-            const printTitle = matchedItem ? matchedItem.title.substring(0, 18) + "..." : "Record";
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (logger) logger.textContent = `🚀 Deleting ${idsToNuke.length} items sequentially...`;
 
+        chrome.runtime.sendMessage({
+            action: "startBackgroundNuke",
+            itemsToNuke: idsToNuke,
+            tabId: tabs[0].id
+        });
 
-            logger.textContent = `❌ Clearing: ${printTitle}`;
-
-
-            chrome.tabs.sendMessage(tabs[0].id, { action: "deleteTargetItem", targetId: targetId });
-
-
-            localHistoryData = localHistoryData.filter(item => item.id !== targetId);
-
-
-            chk.parentElement.remove();
-
-
-            await new Promise(resolve => setTimeout(resolve, 2500));
-        }
-
-        logger.textContent = " Synchronization complete.";
+        // Instantly wipe them from the panel UI
+        localHistoryData = localHistoryData.filter(item => !idsToNuke.includes(item.id));
+        chrome.storage.local.set({ currentHistory: localHistoryData });
         applyCurrentFilter();
     });
 });

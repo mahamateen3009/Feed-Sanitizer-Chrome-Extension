@@ -1,73 +1,65 @@
 function scrapeUnifiedData() {
     let items = [];
-    let counter = 0;
-
-
     const blocks = document.querySelectorAll('div[role="listitem"], .V67aAc, div[data-meta-key]');
 
-    blocks.forEach((block) => {
+    blocks.forEach((block, index) => {
+        // Skip hidden/deleted items entirely
+        if (block.offsetHeight === 0 || block.offsetWidth === 0) return;
+
+        const parentText = (block.textContent || block.innerText || "").toLowerCase();
+        if (parentText.includes("deleting") || parentText.includes("deletion started")) return;
 
         const link = block.querySelector('a[href*="youtube.com/"]');
         if (!link) return;
 
         const rawText = link.textContent || link.innerText || "";
         const cleanText = rawText.trim();
-
-
         if (!cleanText || cleanText.includes("myactivity.google.com")) return;
-
-
-        const uniqueId = 'yt-unified-id-' + counter;
-        counter++;
-
-
-        block.setAttribute('data-ext-id', uniqueId);
 
         const destinationUrl = link.href || "";
 
+        // Use the actual layout index position as the persistent key
+        const secureId = "idx-" + index;
+        block.setAttribute('data-ext-id', secureId);
+
         if (destinationUrl.includes("watch")) {
-
-            const parentText = (block.textContent || block.innerText || "").toLowerCase();
             const isShort = parentText.includes("shorts") || /\b(0:[0-5][0-9])\b/.test(parentText);
-
-            if (!items.some(i => i.title === cleanText)) {
-                items.push({ id: uniqueId, title: cleanText, type: isShort ? 'Short' : 'Video' });
-            }
+            items.push({ id: secureId, title: cleanText, type: isShort ? 'Short' : 'Video' });
         } else if (destinationUrl.includes("results?search_query=")) {
-
             let processedSearchText = cleanText;
             if (processedSearchText.startsWith("Search for")) {
                 processedSearchText = processedSearchText.replace("Search for", "").trim();
             }
-
-            if (!items.some(i => i.title === processedSearchText)) {
-                items.push({ id: uniqueId, title: processedSearchText, type: 'Search' });
-            }
+            items.push({ id: secureId, title: processedSearchText, type: 'Search' });
         }
     });
 
     return items;
 }
 
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getHistory") {
         sendResponse({ data: scrapeUnifiedData() });
-        return false; // Sync handling complete, close channel
+        return false;
     }
 
     if (request.action === "deleteTargetItem") {
         const targetBlock = document.querySelector(`[data-ext-id="${request.targetId}"]`);
         if (targetBlock) {
-
             const delBtn = targetBlock.querySelector('button[aria-label^="Delete"], button[jsname="V67aAc"], [role="button"]');
             if (delBtn) {
                 delBtn.click();
                 sendResponse({ status: "success" });
-                return false; // Action handled cleanly
+                return false;
             }
         }
         sendResponse({ status: "not_found" });
+        return false;
+    }
+
+    if (request.action === "triggerPageScroll") {
+        window.scrollTo(0, document.body.scrollHeight);
+        sendResponse({ status: "scroll_executed" });
         return false;
     }
 
