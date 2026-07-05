@@ -68,13 +68,13 @@ function applyCurrentFilter() {
     else renderList(localHistoryData.filter(i => i.type === currentFilter));
 }
 
-// --- Filter Event Listeners ---
+
 document.getElementById("showAll")?.addEventListener("click", () => { currentFilter = "All"; applyCurrentFilter(); });
 document.getElementById("showShorts")?.addEventListener("click", () => { currentFilter = "Short"; applyCurrentFilter(); });
 document.getElementById("showVideos")?.addEventListener("click", () => { currentFilter = "Video"; applyCurrentFilter(); });
 document.getElementById("showSearches")?.addEventListener("click", () => { currentFilter = "Search"; applyCurrentFilter(); });
 
-// --- Selection Macro System ---
+
 document.getElementById("selectAll")?.addEventListener("click", () => {
     document.querySelectorAll(".video-chk").forEach(chk => chk.checked = true);
 });
@@ -82,20 +82,20 @@ document.getElementById("clearAll")?.addEventListener("click", () => {
     document.querySelectorAll(".video-chk").forEach(chk => chk.checked = false);
 });
 
-// 🌟 MANUAL RE-FILL OVERRIDE (Flawless Execution Sync)
+
 document.getElementById("loadMoreBtn")?.addEventListener("click", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const logger = document.getElementById("statusLogger");
         if (logger) logger.textContent = "⏳ Scrolling page downwards...";
 
-        // Scroll the live window down to spin up native lazy-load items
+        
         chrome.tabs.sendMessage(tabs[0].id, { action: "triggerPageScroll" });
 
-        // Wipe local memory state completely so old dynamic index IDs drop
+       
         localHistoryData = [];
         chrome.storage.local.set({ currentHistory: [] });
 
-        // Wait for page transition, then index the entire page cleanly
+       
         setTimeout(() => {
             fetchLatestData(tabs[0].id);
             if (logger) logger.textContent = "✅ Fresh screen indices mapped!";
@@ -103,7 +103,7 @@ document.getElementById("loadMoreBtn")?.addEventListener("click", () => {
     });
 });
 
-// --- Execution Pipeline ---
+
 document.getElementById("deleteSelected")?.addEventListener("click", () => {
     const checkboxes = document.querySelectorAll(".video-chk:checked");
     const logger = document.getElementById("statusLogger");
