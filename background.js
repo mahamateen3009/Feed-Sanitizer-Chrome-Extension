@@ -36,7 +36,7 @@ async function processQueue() {
             await chrome.storage.local.set({ currentHistory: updatedHistory });
         }
 
-        // Your custom 2.5s pacing interval to safely dodge UI layout shifts
+       
         await new Promise(resolve => setTimeout(resolve, 2500));
     }
 
