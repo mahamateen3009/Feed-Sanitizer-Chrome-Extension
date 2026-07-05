@@ -3,7 +3,7 @@ function scrapeUnifiedData() {
     const blocks = document.querySelectorAll('div[role="listitem"], .V67aAc, div[data-meta-key]');
 
     blocks.forEach((block, index) => {
-        // Skip hidden/deleted items entirely
+        
         if (block.offsetHeight === 0 || block.offsetWidth === 0) return;
 
         const parentText = (block.textContent || block.innerText || "").toLowerCase();
@@ -18,7 +18,7 @@ function scrapeUnifiedData() {
 
         const destinationUrl = link.href || "";
 
-        // Use the actual layout index position as the persistent key
+        
         const secureId = "idx-" + index;
         block.setAttribute('data-ext-id', secureId);
 
